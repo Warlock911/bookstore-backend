@@ -2,31 +2,24 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
-
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 mongoose
   .connect(
-    "mongodb+srv://user:test@cluster0.dyvg9.mongodb.net/book-store",
+    process.env.MONGODV_URI ||
+      "mongodb+srv://user:test@cluster0.dyvg9.mongodb.net/book-store",
     { useNewUrlParser: true },
     { useUnifiedTopology: true }
   )
   .then(() => {
-    console.log("connected to atlas cloud");
+    console.log("Connected to Atlas Cloud");
   })
   .catch((err) => {
     console.log(err);
   });
 
 app.use(bodyParser.json());
-
-// const notesSchema = {
-//   title: { type: mongoose.SchemaTypes.String, required: true },
-//   content: mongoose.SchemaTypes.String,
-// };
-
-// const Note = mongoose.model("Note", notesSchema);
 
 const BookDataSchema = new mongoose.Schema(
   {
@@ -66,26 +59,11 @@ const BookDataSchema = new mongoose.Schema(
 
 const Book = mongoose.model("Book", BookDataSchema);
 
-// app.get("/", async (req, res) => {
-//   const stuff = await Note.find({}).then((body) => res.send(body));
-//   console.log(stuff);
-// });
-
-// app.post("/", (req, res) => {
-//   const { title, content } = req.body;
-//   const newNote = new Note({
-//     title: title,
-//     content: content,
-//   });
-//   newNote.save();
-//   res.send("it works!!!");
-// });
-
-app.get("/inventory", async (req, res) => {
-  await Book.find({}).then((body) => res.send(body));
+app.get("/", (req, res) => {
+  Book.find({}).then((body) => res.send(body));
 });
 
-app.post("/inventory", (req, res) => {
+app.post("/", (req, res) => {
   const { image, title, author, isbn, genre, price, quantity } = req.body;
   const newBook = new Book({
     image: image,
@@ -97,7 +75,39 @@ app.post("/inventory", (req, res) => {
     quantity: quantity,
   });
   newBook.save();
-  res.send("database is updated");
+  res.send("Database is updated");
 });
 
-app.listen(process.env.PORT || port, () => console.log(`running on port ${port}`));
+app.get("/:id", (req, res) => {
+  Book.findById(req.params.id).then((body) => res.send(body));
+});
+
+app.put("/:id", (req, res) => {
+  const { image, title, author, isbn, genre, price, quantity } = req.body;
+  Book.findOneAndUpdate(
+    { _id: req.params.id },
+    {
+      image: image,
+      title: title,
+      author: author,
+      isbn: isbn,
+      genre: genre,
+      price: price,
+      quantity: quantity,
+    },
+    (err) => {
+      if (err) {
+        res.send(err);
+      }
+      res.send("Updated it with the new values!");
+    }
+  );
+});
+
+app.delete("/:id", (req, res) => {
+  Book.findByIdAndRemove(req.params.id).then(
+    res.send(`Book with ID ${req.params.id} is deleted!`)
+  );
+});
+
+app.listen(port, () => console.log(`Running on port ${port}`));
